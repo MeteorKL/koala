@@ -8,21 +8,19 @@ import (
 )
 
 func GetRequest(URL string) []byte {
-	fmt.Println("GetRequest:", URL)
 	resp, err := http.Get(URL)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-	fmt.Println("resp:", resp)
+	// fmt.Println("resp:", resp)
 	body, err := ioutil.ReadAll(resp.Body)
-	fmt.Println("body:", body)
+	// fmt.Println("body:", body)
 	resp.Body.Close()
 	if err != nil {
 		// handle error
 		return nil
 	}
-	fmt.Println(string(body), err)
 	return body
 }
 

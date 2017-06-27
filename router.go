@@ -89,7 +89,6 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 			isFound = true
 			route.handler(&p, w, r)
 			break
-
 		}
 	}
 
@@ -98,27 +97,22 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// 方便测试
 func Handle(pattern string, handler interface{}) {
 	app.addRoute(pattern, "Handle", handler)
 }
 
-// 查看文章
 func Get(pattern string, handler interface{}) {
 	app.addRoute(pattern, "GET", handler)
 }
 
-// 发布文章
 func Post(pattern string, handler interface{}) {
 	app.addRoute(pattern, "POST", handler)
 }
 
-// 删除文章
 func Delete(pattern string, handler interface{}) {
 	app.addRoute(pattern, "DELETE", handler)
 }
 
-// 更新文章
 func Put(pattern string, handler interface{}) {
 	app.addRoute(pattern, "PUT", handler)
 }
@@ -150,8 +144,14 @@ func RunWithLog(addr string) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		app.route(w, r)
 	})
+	for _, r := range app.routes {
+		for _, s := range r.slice {
+			print("/" + s)
+		}
+		println()
+	}
 	log.Println("Listening on " + addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	if err := http.ListenAndServe(":"+addr, nil); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
 }
