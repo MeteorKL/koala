@@ -1,44 +1,63 @@
 package koala
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
-func GetRequest(URL string) []byte {
+func GetRequest(URL string) (int, []byte) {
 	resp, err := http.Get(URL)
 	if err != nil {
-		fmt.Println(err)
-		return nil
+		return resp.StatusCode, []byte(err.Error())
 	}
-	// fmt.Println("resp:", resp)
 	body, err := ioutil.ReadAll(resp.Body)
-	// fmt.Println("body:", body)
-	resp.Body.Close()
 	if err != nil {
-		// handle error
-		return nil
+		return resp.StatusCode, []byte(err.Error())
 	}
-	return body
+	defer resp.Body.Close()
+	return resp.StatusCode, body
 }
 
-func PostRequest(URL string, param map[string]string) []byte {
-	fmt.Println("PostRequest:", URL)
+func PostRequest(URL string, param map[string]string) (int, []byte) {
 	query := url.Values{}
 	for k, v := range param {
 		query.Set(k, v)
 	}
 	resp, err := http.PostForm(URL, query)
 	if err != nil {
-		// handle error
+		return resp.StatusCode, []byte(err.Error())
 	}
 	body, err := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
 	if err != nil {
-		// handle error
+		return resp.StatusCode, []byte(err.Error())
 	}
-	fmt.Println(string(body))
-	return body
+	defer resp.Body.Close()
+	return resp.StatusCode, body
+}
+
+var client = http.Client{}
+
+func Request(method, url string, param string) []byte {
+	req, err := http.NewRequest(method, url, strings.NewReader(param))
+	if err != nil {
+		return []byte(err.Error())
+	}
+	if method != "GET" && method != "" {
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return []byte(err.Error())
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return []byte(resp.Status)
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte(err.Error())
+	}
+	return b
 }

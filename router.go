@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -99,6 +100,30 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 
 func Handle(pattern string, handler interface{}) {
 	app.addRoute(pattern, "Handle", handler)
+}
+
+func GetSingleIntParamOrDefault(p map[string][]string, key string, def int) (ret int) {
+	rets := p[key]
+	if rets == nil || len(rets) == 0 {
+		ret = def
+	} else {
+		var err error
+		ret, err = strconv.Atoi(rets[0])
+		if err != nil {
+			ret = def
+		}
+	}
+	return
+}
+
+func GetSingleStringParamOrDefault(p map[string][]string, key string, def string) (ret string) {
+	rets := p[key]
+	if rets == nil || len(rets) == 0 {
+		ret = def
+	} else {
+		ret = rets[0]
+	}
+	return
 }
 
 func Get(pattern string, handler interface{}) {
