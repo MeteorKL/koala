@@ -2,7 +2,6 @@ package koala
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 )
 
@@ -11,12 +10,18 @@ func ReadJSONFile(filename string) (map[string]string, error) {
 	var data = map[string]string{}
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		fmt.Println("ReadFile: ", err.Error())
 		return nil, err
 	}
 	if err := json.Unmarshal(bytes, &data); err != nil {
-		fmt.Println("Unmarshal: ", err.Error())
 		return nil, err
 	}
 	return data, nil
+}
+
+func WriteJSONFile(filename string, data map[string]string) error {
+	b, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filename, b, 0666)
 }

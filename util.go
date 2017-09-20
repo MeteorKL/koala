@@ -16,6 +16,10 @@ func HashString(s string) string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
 }
 
+func Hash(s []byte) string {
+	return fmt.Sprintf("%x", md5.Sum(s))
+}
+
 var RenderPath string
 
 func Render(w http.ResponseWriter, file string, data interface{}) {
