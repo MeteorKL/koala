@@ -156,6 +156,7 @@ var app = App{}
 
 func Run(addr string) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.Method, r.URL.Path)
 		app.route(w, r)
 	})
 	log.Println("Listening on port " + addr)

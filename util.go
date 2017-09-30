@@ -1,24 +1,12 @@
 package koala
 
 import (
-	"crypto/md5"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
+	"log"
+	"encoding/json"
 )
-
-var base64coder = base64.StdEncoding
-
-func HashString(s string) string {
-	return fmt.Sprintf("%x", md5.Sum([]byte(s)))
-}
-
-func Hash(s []byte) string {
-	return fmt.Sprintf("%x", md5.Sum(s))
-}
 
 var RenderPath string
 
