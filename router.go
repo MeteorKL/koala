@@ -11,6 +11,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"github.com/MeteorKL/koala/logger"
 )
 
 // 路由定义
@@ -46,9 +47,6 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 
 	requestPath := r.URL.Path
 	r.ParseForm()
-	if showLog {
-		log.Println(r.Method + " " + requestPath)
-	}
 	isFound := false
 	for i := 0; i < len(app.routes); i++ {
 		route := app.routes[i]
@@ -116,6 +114,16 @@ func GetSingleIntParamOrDefault(p map[string][]string, key string, def int) (ret
 	return
 }
 
+func GetSingleStringParam(p map[string][]string, key string) (ret string) {
+	rets := p[key]
+	if rets == nil || len(rets) == 0 {
+		ret = ""
+	} else {
+		ret = rets[0]
+	}
+	return
+}
+
 func GetSingleStringParamOrDefault(p map[string][]string, key string, def string) (ret string) {
 	rets := p[key]
 	if rets == nil || len(rets) == 0 {
@@ -138,6 +146,10 @@ func Delete(pattern string, handler interface{}) {
 	app.addRoute(pattern, "DELETE", handler)
 }
 
+func Static(pattern string, dir string) {
+	http.Handle(pattern, http.StripPrefix(pattern, http.FileServer(http.Dir(dir))))
+}
+
 func Put(pattern string, handler interface{}) {
 	app.addRoute(pattern, "PUT", handler)
 }
@@ -156,27 +168,10 @@ var app = App{}
 
 func Run(addr string) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Println(r.Method, r.URL.Path)
+		logger.Info(r.Method + " " + r.URL.Path)
 		app.route(w, r)
 	})
-	log.Println("Listening on port " + addr)
-	if err := http.ListenAndServe(":"+addr, nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
-	}
-}
-
-func RunWithLog(addr string) {
-	showLog = true
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		app.route(w, r)
-	})
-	for _, r := range app.routes {
-		for _, s := range r.slice {
-			print("/" + s)
-		}
-		println()
-	}
-	log.Println("Listening on " + addr)
+	logger.Info("Listening on port " + addr)
 	if err := http.ListenAndServe(":"+addr, nil); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
