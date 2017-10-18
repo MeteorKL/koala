@@ -29,24 +29,36 @@ func check(level int) bool {
 }
 
 func Debug(msg interface{}) {
+	if msg==nil {
+		return
+	}
 	if check(debug) {
 		log.Println("\033[;35mDEBUG\033[0m", msg)
 	}
 }
 
 func Info(msg interface{}) {
+	if msg==nil {
+		return
+	}
 	if check(info) {
 		log.Println("\033[;32mINFO\033[0m", msg)
 	}
 }
 
 func Warn(msg interface{}) {
+	if msg==nil {
+		return
+	}
 	if check(warn) {
 		log.Println("\033[;33mWARN\033[0m", msg)
 	}
 }
 
 func Error(msg interface{}) {
+	if msg==nil {
+		return
+	}
 	if check(error) {
 		log.Println("\033[;31mERROR\033[0m", msg)
 	}
