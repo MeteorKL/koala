@@ -2,55 +2,32 @@ package koala
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"strings"
-	"github.com/MeteorKL/koala/logger"
 )
 
 // 路由定义
 type Route struct {
 	slice   []string
 	method  string
-	handler func(p *Params, w http.ResponseWriter, r *http.Request)
+	handler func(context *Context)
 }
 
-type Params struct {
-	Param     map[string][]string
-	ParamGet  map[string][]string
-	ParamPost map[string][]string
-	ParamUrl  map[string]string
+func (app *App) addRoute(pattern string, method string, handler func(context *Context)) {
+	slice := strings.Split(pattern, "/")
+	app.routes = append(app.routes, Route{slice: slice[1:], method: method, handler: handler})
 }
 
-type App struct {
-	routes        []Route
-	listeningPort net.Listener
-}
-
-var showLog = false
-
-// 使用正则路由转发
-func (app *App) route(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	p := Params{
-		ParamGet:  r.URL.Query(),
-		ParamPost: r.PostForm,
-		Param:     r.Form,
-		ParamUrl:  make(map[string]string),
-	}
-
-	requestPath := r.URL.Path
-	r.ParseForm()
+func (app *App) route(context *Context) {
+	requestPath := context.Request.URL.Path
 	isFound := false
 	for i := 0; i < len(app.routes); i++ {
 		route := app.routes[i]
-		if route.method == "Handle" || route.method == r.Method {
+		if route.method == context.Request.Method {
 			url := strings.Split(requestPath, "/")[1:]
 			if len(url) != len(route.slice) {
 				continue
@@ -63,7 +40,7 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 				matched := true
 				for i := 0; i < len(route.slice); i++ {
 					if route.slice[i][0] == ':' {
-						p.ParamUrl[route.slice[i][1:]] = url[i]
+						context.urlSlice[route.slice[i][1:]] = url[i]
 					} else if route.slice[i] == url[i] {
 						continue
 					} else {
@@ -75,105 +52,14 @@ func (app *App) route(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 			}
-
-			if showLog {
-				log.Println(route.slice)
-				fmt.Print("get: ")
-				fmt.Println(p.ParamGet)
-				fmt.Print("post: ")
-				fmt.Println(p.ParamPost)
-				fmt.Print("url: ")
-				fmt.Println(p.ParamUrl)
-			}
 			isFound = true
-			route.handler(&p, w, r)
+			route.handler(context)
 			break
 		}
 	}
 
 	if !isFound {
-		NotFound(w)
-	}
-}
-
-func Handle(pattern string, handler interface{}) {
-	app.addRoute(pattern, "Handle", handler)
-}
-
-func GetSingleIntParamOrDefault(p map[string][]string, key string, def int) (ret int) {
-	rets := p[key]
-	if rets == nil || len(rets) == 0 {
-		ret = def
-	} else {
-		var err error
-		ret, err = strconv.Atoi(rets[0])
-		if err != nil {
-			ret = def
-		}
-	}
-	return
-}
-
-func GetSingleStringParam(p map[string][]string, key string) (ret string) {
-	rets := p[key]
-	if rets == nil || len(rets) == 0 {
-		ret = ""
-	} else {
-		ret = rets[0]
-	}
-	return
-}
-
-func GetSingleStringParamOrDefault(p map[string][]string, key string, def string) (ret string) {
-	rets := p[key]
-	if rets == nil || len(rets) == 0 {
-		ret = def
-	} else {
-		ret = rets[0]
-	}
-	return
-}
-
-func Get(pattern string, handler interface{}) {
-	app.addRoute(pattern, "GET", handler)
-}
-
-func Post(pattern string, handler interface{}) {
-	app.addRoute(pattern, "POST", handler)
-}
-
-func Delete(pattern string, handler interface{}) {
-	app.addRoute(pattern, "DELETE", handler)
-}
-
-func Static(pattern string, dir string) {
-	http.Handle(pattern, http.StripPrefix(pattern, http.FileServer(http.Dir(dir))))
-}
-
-func Put(pattern string, handler interface{}) {
-	app.addRoute(pattern, "PUT", handler)
-}
-
-func (app *App) addRoute(pattern string, method string, handler interface{}) {
-	slice := strings.Split(pattern, "/")
-	app.routes = append(app.routes, Route{slice: slice[1:], method: method, handler: handler.(func(p *Params, w http.ResponseWriter, r *http.Request))})
-}
-
-func NotFound(w http.ResponseWriter) {
-	w.WriteHeader(404)
-	w.Write([]byte("404 Page Not Found!"))
-}
-
-var app = App{}
-
-func Run(addr string) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		logger.Info(r.Method + " " + r.URL.Path)
-		app.route(w, r)
-	})
-	logger.Info("Listening on port " + addr)
-	if err := http.ListenAndServe(":"+addr, nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+		app.notFoundHandler(context)
 	}
 }
 

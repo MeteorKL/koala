@@ -1,4 +1,4 @@
-package koala
+package client
 
 import (
 	"io/ioutil"

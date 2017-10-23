@@ -1,4 +1,4 @@
-package koala
+package util
 
 import (
 	"encoding/json"

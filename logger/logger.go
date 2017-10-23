@@ -9,6 +9,7 @@ const (
 	info
 	warn
 	error
+	fatal
 )
 
 var logLevels = map[string]int{
@@ -16,6 +17,7 @@ var logLevels = map[string]int{
 	"info":  1,
 	"warn":  2,
 	"error": 3,
+	"fatal": 4,
 }
 
 var logLevel = 1
@@ -61,5 +63,14 @@ func Error(msg interface{}) {
 	}
 	if check(error) {
 		log.Println("\033[;31mERROR\033[0m", msg)
+	}
+}
+
+func Fatal(msg interface{}) {
+	if msg==nil {
+		return
+	}
+	if check(fatal) {
+		log.Panic("\033[;31mFATAL\033[0m", msg)
 	}
 }
