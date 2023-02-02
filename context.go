@@ -10,6 +10,10 @@ import (
 	"io"
 	"io/ioutil"
 	"bytes"
+	"path"
+	"os"
+	"errors"
+	"strings"
 )
 
 type Context struct {
@@ -20,8 +24,16 @@ type Context struct {
 	query     url.Values
 	bodyQuery url.Values
 }
+const (
+	defaultMaxMemory = 32 << 20 // 32 MB
+)
 
 func initContext(app *App, w http.ResponseWriter, r *http.Request) *Context {
+	var err error
+	if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		err = r.ParseMultipartForm(defaultMaxMemory)
+		logger.Warn(err)
+	}
 	r.ParseForm()
 	c := &Context{
 		app:       app,
@@ -29,7 +41,6 @@ func initContext(app *App, w http.ResponseWriter, r *http.Request) *Context {
 		Request:   r,
 		bodyQuery: r.PostForm,
 	}
-	var err error
 	if c.query, err = url.ParseQuery(r.URL.RawQuery); err != nil {
 		logger.Info(err)
 	}
@@ -65,9 +76,17 @@ func (c *Context) GetQueryStringOrDefault(key string, def string) string {
 	return c.query[key][0]
 }
 
-func (c *Context) GetBodyAsJson(MaxMemory int64) []byte {
+func (c *Context) GetBody(MaxMemory int64) []byte {
 	safe := &io.LimitedReader{R: c.Request.Body, N: MaxMemory}
 	requestBody, _ := ioutil.ReadAll(safe)
+	c.Request.Body.Close()
+	bf := bytes.NewBuffer(requestBody)
+	c.Request.Body = ioutil.NopCloser(bf)
+	return requestBody
+}
+
+func (c *Context) GetBodyUnsafe() []byte {
+	requestBody, _ := ioutil.ReadAll(c.Request.Body)
 	c.Request.Body.Close()
 	bf := bytes.NewBuffer(requestBody)
 	c.Request.Body = ioutil.NopCloser(bf)
@@ -114,4 +133,56 @@ func (c *Context) Back() {
 	t, err := template.New("x").Parse("<script>history.go(-1);</script>")
 	logger.Warn(err)
 	t.Execute(c.Writer, nil)
+}
+
+var DEFAULT_VAILD_SUFFIX = []string{
+	".doc", ".docx",
+	".ppt", ".pptx",
+	".xls", ".xlsx",
+	".txt", ".pdf",
+}
+
+var VaildSuffix = DEFAULT_VAILD_SUFFIX
+
+func (c *Context) SavePostFile(key string, dir string, vaildSuffix []string) (filename string, suffix string, err error) {
+	file, handle, err := c.Request.FormFile(key)
+	if err != nil {
+		err = errors.New("上传文件失败")
+		return
+	}
+	filename = handle.Filename
+	suffix = path.Ext(filename)
+	flag := false
+	if vaildSuffix == nil {
+		vaildSuffix = VaildSuffix
+	}
+	for _, s := range vaildSuffix {
+		if suffix == s {
+			flag = true
+		}
+	}
+	if !flag {
+		err = errors.New("不支持的文件后缀名")
+		return
+	}
+	filepath := dir + filename
+	os.MkdirAll(path.Dir(filepath), 0777)
+
+	_, err = os.Stat(filepath)
+	if !os.IsNotExist(err) {
+		err = errors.New("该文件已存在")
+		return
+	}
+
+	f, err := os.OpenFile(filepath, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(f, file)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	defer file.Close()
+	return
 }
